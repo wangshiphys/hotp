@@ -1,6 +1,6 @@
 """
 Calculate the Time-Based One-Time Password for High Performance Computing
-Center of CICAM
+Center of CICAM.
 """
 
 
@@ -11,18 +11,18 @@ import hmac
 
 
 TIME_INTERVAL = 30
-HOTP_LENGTH = 6
+TOTP_LENGTH = 6
 ENCODING = "utf-8"
 
 
 def OneTimePasswd(key, msg, digestmod="sha1", length=6):
     hmac_hash = hmac.digest(key=key, msg=msg, digest=digestmod)
-    offset = hmac_hash[-1] & 0xf
+    offset = hmac_hash[-1] & 0xF
     otp_integer = (
-        (hmac_hash[offset] & 0x7f) << 24 |
-        (hmac_hash[offset + 1] & 0xff) << 16 |
-        (hmac_hash[offset + 2] & 0xff) << 8 |
-        (hmac_hash[offset + 3] & 0xff)
+        (hmac_hash[offset] & 0x7F) << 24
+        | (hmac_hash[offset + 1] & 0xFF) << 16
+        | (hmac_hash[offset + 2] & 0xFF) << 8
+        | (hmac_hash[offset + 3] & 0xFF)
     )
     otp = str(otp_integer % (10 ** length)).rjust(length, "0")
     return otp
@@ -50,21 +50,19 @@ if __name__ == "__main__":
             with open("token", "wb") as fp:
                 fp.write(token_bytes)
 
-    # The character '\r' is `carriage return`
-    # It returns the cursor to the start of the line
-    msg0 = "Latest Verification Code: {0}"
-    msg1 = "Countdown:{0:2d}s\r"
+    info = "Countdown:{0:2d}s"
+    indent = " " * len(info)
     while True:
         now_window = int(time() / TIME_INTERVAL)
         hotp = OneTimePasswd(
             key=base64.b32decode(token),
             msg=now_window.to_bytes(8, byteorder="big"),
-            length=HOTP_LENGTH,
+            length=TOTP_LENGTH,
         )
-        print(msg0.format(hotp))
+        print(indent + hotp)
 
         left = (now_window + 1) * TIME_INTERVAL - int(time())
         for i in range(left, 0, -1):
-            print(msg1.format(i), end="")
+            print(info.format(i), end="\r")
             sleep(1)
-        print(msg1.format(0), end="")
+        print(info.format(0))
